@@ -9,6 +9,55 @@
 ngx.header["X-Server-By"] = 'yongze.chen'
 ngx.header['Content-Type']="text/html;charset=UTF-8"
 
+local mysql = require "resty.mysql"
+local db, err = mysql:new()
+if not db then
+    ngx.say("failed to instantiate mysql: ", err)
+    return
+end
+
+db:set_timeout(1000) -- 1 sec
+
+-- or connect to a unix domain socket file listened
+-- by a mysql server:
+--     local ok, err, errcode, sqlstate =
+--           db:connect{
+--              path = "/path/to/mysql.sock",
+--              database = "ngx_test",
+--              user = "ngx_test",
+--              password = "ngx_test" }
+
+local ok, err, errcode, sqlstate = db:connect{
+    host = "114.215.25.201",
+    port = 4307,
+    database = "tangka_dev",
+    user = "shengle_dev",
+    password = "km3Z4JH)(kA-wwe-49Qo",
+    charset = "utf8",
+    max_packet_size = 1024 * 1024,
+}
+
+if not ok then
+    ngx.say("failed to connect: ", err, ": ", errcode, " ", sqlstate)
+    return
+end
+
+--ngx.say("connected to mysql.")
+
+-- run a select query, expected about 10 rows in
+-- the result set:
+res, err, errcode, sqlstate =
+db:query("select * from my_user order by id asc limit 10", 10)
+if not res then
+    ngx.say("bad result: ", err, ": ", errcode, ": ", sqlstate, ".")
+    return
+end
+
+local cjson = require "cjson"
+ngx.say( cjson.encode(res))
+
+ngx.exit(200)
+
 ngx.say("=================== 请求头 headers================<br/>")
 local headers = ngx.req.get_headers()
 ngx.say("headers begin", "<br/>")
